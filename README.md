@@ -8,6 +8,10 @@ final project.
 
 See the [final write-up](doc/ge.pdf) for the details.
 
+The simulator was used to generate this teapot:
+
+![Teapot](teapot.jpg)
+
 From the introduction of the write-up:
 
 > This document outlines the design of the Graphics Engine (GE), which
