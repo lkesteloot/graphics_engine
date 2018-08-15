@@ -1,0 +1,59 @@
+\usepackage{fancyhdr}
+\pagestyle{fancyplain}
+\addtolength{\headwidth}{\marginparsep}
+\addtolength{\headwidth}{\marginparwidth}
+\addtolength{\headheight}{4pt}
+% These used to be \setlength, which failed, but changing
+% them to \renewcommand causes infinite recursion.
+%%\renewcommand{\footrulewidth}{\headrulewidth}
+%%\renewcommand{\plainfootrulewidth}{\headrulewidth}
+%%\renewcommand{\plainheadrulewidth}{\headrulewidth}
+\renewcommand{\chaptermark}[1] {\markboth{#1}{}}
+\renewcommand{\sectionmark}[1] {\markright{\thesection\ #1}}
+\newcommand{\bigbar}{\hrule\hrule\hrule\vspace{2pt}}
+\lhead[\fancyplain{\bigbar\bf\thepage}{\bigbar\bf\thepage}]{\fancyplain{\bigbar\bf\rightmark}{\bigbar\bf\rightmark}}
+\rhead[\fancyplain{\bf\leftmark}{\bf\leftmark}]{\fancyplain{\bf\thepage}{\bf\thepage}}
+% \cfoot{\fancyplain{\textbf{COMP 265: \textit{Design Project}}}{\textbf{COMP 265: \textit{Design Project}}}}
+\cfoot{\fancyplain{\ }{\ }}
+
+\renewcommand{\section}{\@startsection
+    {section}%
+    {1}%
+    {\z@}%
+%    {-3.5ex \@plus -1ex \@minus -.2ex}%
+    {1pt}%
+    {2.3ex \@plus.2ex}%
+%    {1pt}%
+    {\Large\bfseries\sffamily}}
+
+% \def\@makechapterhead#1{%
+%   \vspace*{50\p@}%
+%   {\parindent \z@ \raggedright \reset@font
+%     \ifnum \c@secnumdepth >\m@ne
+%        \if@mainmatter
+%          \huge\bfseries\sffamily\hfill\@chapapp{} \thechapter
+%          \par
+%          \vskip 20\p@
+%        \fi
+%        \fi
+%     \Huge \bfseries\sffamily\hfill #1\par
+%     \nobreak
+%     \vskip 40\p@
+%   }}
+
+\def\@makechapterhead#1{%
+  \vspace*{50\p@}%
+  {\parindent \z@ \raggedright \reset@font
+    {\Huge\bfseries\sffamily\hspace{-.5in}\makebox[.5in][l]{\thechapter}}%
+    \Huge \bfseries\sffamily #1\par
+    \nobreak
+    \vskip 40\p@
+  }}
+
+\makeatletter
+\def\@seccntformat#1{\hspace{-0.5in}\hbox to.5in{\csname the#1\endcsname\hfil}}
+\makeatother
+
+\newcommand{\Section}[1]{\vskip 3.5ex plus 1ex minus .2ex%
+	\vbox{\nointerlineskip\moveleft .5in\vbox{\advance\linewidth by.5in\hrule width \linewidth}%
+	\section{#1}}}

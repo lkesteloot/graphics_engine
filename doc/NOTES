@@ -1,0 +1,11 @@
+
+Need packages:
+    texlive-generic-recommended
+    texlive-generic-extra
+    texlive-latex-extra
+    ghostscript
+
+To run:
+    make tex
+    dvipdfm -o ~/public_html/ge.pdf ge.dvi
+

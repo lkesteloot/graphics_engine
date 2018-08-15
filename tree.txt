@@ -1,0 +1,105 @@
+
+SPECIAL-PURPOSE HARDWARE FOR RASTERIZATION
+------------------------------------------
+
+The inner loop of the plane equation rasterizer must perform the following
+operations:
+
+   Test three planes to see if they have the same sign
+   If same sign, write color and Z to frame buffer
+   Increment R, G, B, Z, and three plane equations
+
+This is way too many cycles to do in a tight inner loop, and we'll only
+be able to get 30k triangles or so with a 100MHz clock.
+
+Instead, we could rasterize 16 horizontal adjoining pixels at a time
+using either parallel DDAs or with a PixelPlanes-like tree.
+
+Tree stuff
+----------
+
+For a tree, we could use a four-level tree that would handle 32-bit
+signed fixed-point addition.  The tree would be pipelined so as to
+get one tree evaluation per clock cycle with a 3 clock cycle lead.
+We'd need several new commands:
+
+  TREECLR
+    Clear all 16 enable bits.
+
+  TREESET	r1,r2
+    Setup the tree so that the first pixel is at location r1,r2 (x,y).
+
+  TREEIN	r1,r2
+    Given starting constant r1 and "A" value r2, test to see if pixel is
+    in/out of triangle.
+
+  TREEVAL	r1,r2,n
+    Given starting constant r1 and "A" value r2, calculate parameter
+    value and store in memory location n, with 0 <= n <= 3.
+
+  TREEPUT
+    Write the values of the tree into memory.  Maybe this instruction is
+    not necessary or could be mixed with TREEVAL and n = 4.
+
+Enable Registers
+----------------
+
+Each tree node will have one enable register, which will determine whether
+the color and Z values will be written to memory.  This enable register
+E will not be an actual memory bit, but instead will be the equation
+E = I | ~O, where I and O are one-bit registers.  On TREECLR, the I
+registers will be set to 1 and the O registers to 0.  On TREEIN
+instructions, the sign bits of the results will be ANDed with the I
+register and ORed with the O register.  The E register will then be
+testing whether all three TREEIN commands had the same sign.
+
+Tree Setup
+----------
+
+The tree setup instruction tells the tree where the 16-pixel span is
+located on the screen.  When the instruction is executed, the Z values
+for that span will be read from memory (asynchronously to the rest of
+the tree operations) so that the first TREEVAL instruction with n == 0
+can do a compare.
+
+Tree Values
+-----------
+
+When n == 0, the tree will treat the result as a Z value.  The high
+word of the result will be compared to the Z values that were read
+when the tree was setup, and pixels that fail the comparison will set
+their I register to 0, disabling color and Z writes to memory.
+
+When n == 1, bits 16 through 20 will be moved into bits 0 through 4
+of the color register.
+
+When n == 2, bits 16 through 20 will be moved into bits 5 through 9
+of the color register.
+
+When n == 3, bits 16 through 20 will be moved into bits 10 through 14
+of the color register.
+
+(???: Maybe we need another instruction to write color, or maybe
+TREEVAL with n == 3 should do it.)
+
+Pipeline
+--------
+
+The tree is pipelined so that each level can be used independently of
+the others.  The timeline would look something like this:
+
+Instruction   Level 0   Level 1   Level 2   Level 3   Actions at leaves
+-----------   -------   -------   -------   -------   -----------------
+TREECLR                                               Clear enable
+TREESET                                               Read Z from Z-Buffer
+TREEIN           1
+TREEIN           2         1
+TREEIN           3         2         1
+TREEVAL          Z         3         2         1      Modify enable
+TREEVAL          R         Z         3         2      Modify enable
+TREEVAL          G         R         Z         3      Modify enable
+TREEVAL          B         G         R         Z      Compare, modify enable
+TREEPUT          ?         B         G         R      Move bits into color
+X += 16                    ?         B         G      Move bits into color
+COMPARE X to XMAX                    ?         B      Move bits into color
+JUMP TO TOP OF LOOP                            ?      Write enabled colors

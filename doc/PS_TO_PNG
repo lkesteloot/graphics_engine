@@ -1,0 +1,1 @@
+gs -r300 -dNOPAUSE -dBATCH -sDEVICE=png48 -sOutputFile=ge.model.png ge.model.ps

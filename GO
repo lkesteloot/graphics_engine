@@ -1,0 +1,1 @@
+./sim -e emem -s imem.sym imem dmem

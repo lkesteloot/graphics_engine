@@ -1,0 +1,58 @@
+\indexentry{plane equation method}{3}
+\indexentry{Z-buffer}{4}
+\indexentry{lighting}{4}
+\indexentry{lighting!Phong}{4}
+\indexentry{transparency!screen-door}{4}
+\indexentry{registers}{7}
+\indexentry{address space}{7}
+\indexentry{status word}{9}
+\indexentry{instruction format}{9}
+\indexentry{addressing modes}{11}
+\indexentry{instruction set}{15}
+\indexentry{instruction set!LD@{\tt LD}}{15}
+\indexentry{instruction set!ST@{\tt ST}}{16}
+\indexentry{instruction set!LI@{\tt LI}}{17}
+\indexentry{instruction set!ADD@{\tt ADD}}{17}
+\indexentry{instruction set!SUB@{\tt SUB}}{19}
+\indexentry{instruction set!MUL@{\tt MUL}}{19}
+\indexentry{instruction set!MULF@{\tt MULF}}{21}
+\indexentry{instruction set!RECP@{\tt RECP}}{21}
+\indexentry{instruction set!AND@{\tt AND}}{23}
+\indexentry{instruction set!OR@{\tt OR}}{23}
+\indexentry{instruction set!XOR@{\tt XOR}}{24}
+\indexentry{instruction set!NOT@{\tt NOT}}{24}
+\indexentry{instruction set!LSL@{\tt LSL}}{25}
+\indexentry{instruction set!LSR@{\tt LSR}}{25}
+\indexentry{instruction set!ASR@{\tt ASR}}{26}
+\indexentry{instruction set!LSLI@{\tt LSLI}}{26}
+\indexentry{instruction set!LSRI@{\tt LSRI}}{27}
+\indexentry{instruction set!ASRI@{\tt ASRI}}{27}
+\indexentry{instruction set!JMP@{\tt JMP}}{28}
+\indexentry{instruction set!CALL@{\tt CALL}}{28}
+\indexentry{instruction set!JEQ@{\tt JEQ}}{29}
+\indexentry{instruction set!JEQL@{\tt JEQL}}{29}
+\indexentry{instruction set!JNE@{\tt JNE}}{31}
+\indexentry{instruction set!JNEL@{\tt JNEL}}{31}
+\indexentry{instruction set!JLT@{\tt JLT}}{33}
+\indexentry{instruction set!JLTL@{\tt JLTL}}{33}
+\indexentry{instruction set!JLE@{\tt JLE}}{35}
+\indexentry{instruction set!JLEL@{\tt JLEL}}{35}
+\indexentry{instruction set!JGT@{\tt JGT}}{37}
+\indexentry{instruction set!JGTL@{\tt JGTL}}{37}
+\indexentry{instruction set!JGE@{\tt JGE}}{39}
+\indexentry{instruction set!JGEL@{\tt JGEL}}{39}
+\indexentry{instruction set!DOT@{\tt DOT}}{41}
+\indexentry{instruction set!READ@{\tt READ}}{41}
+\indexentry{instruction set!WRITE@{\tt WRITE}}{43}
+\indexentry{instruction set!SCRSET@{\tt SCRSET}}{43}
+\indexentry{instruction set!CLS@{\tt CLS}}{45}
+\indexentry{instruction set!TREESET@{\tt TREESET}}{45}
+\indexentry{instruction set!TREEIN@{\tt TREEIN}}{46}
+\indexentry{instruction set!TREEVAL@{\tt TREEVAL}}{46}
+\indexentry{instruction set!TREEPUT@{\tt TREEPUT}}{48}
+\indexentry{rasterization}{51}
+\indexentry{plane equation method}{51}
+\indexentry{edge equations}{51}
+\indexentry{parameter interpolation}{51}
+\indexentry{mode word}{60}
+\indexentry{transparency!screen-door}{65}

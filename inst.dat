@@ -1,0 +1,481 @@
+#
+# Instructions
+#
+# Format is:
+#
+# INST		(LD, ST, etc.)
+# FORMAT	(OP, R, RR, RRR, A, RA, AR, RRI)
+# NAME		(Name of instruction)
+# DESC		(Any text, including LaTeX codes, can span multiple lines)
+# <blank line>
+#
+
+>Register Loading and Storing
+LD
+RA
+Load Register
+The word in data memory at location {\tt r2(imm)} is loaded into
+register {\tt r1}.
+
+reg[r1] = dMem[imm + reg[r2]];
+SetStatusWord (reg[r1]);
+
+ST
+AR
+Save Register
+The word in register {\tt r1} is stored in data memory at
+location {\tt r2(imm)}.  Note that although the assembly operands are
+the reverse of the {\tt LD} instruction, the instruction encoding does
+not change.
+
+dMem[imm + reg[r2]] = reg[r1];
+
+LI
+RA
+Load immediate
+The 16-bit value {\tt r2(imm)} is loaded into {\tt r1}.  The upper 16
+bits of {\tt imm} are sign-extended.  (I.e., all upper 16 bits are set
+to bit 15.)
+
+reg[r1] = (signed long)(signed short)(imm + reg[r2]);
+SetStatusWord (reg[r1]);
+
+>General Purpose Arithmetic and Logic
+>>Arithmetic
+ADD
+RRR
+Fixed-point Add
+Registers {\tt r2} and {\tt r3} are added together and the sum is placed
+in {\tt r1}.
+
+reg[r1] = reg[r2] + reg[r3];
+SetStatusWord (reg[r1]);
+
+SUB
+RRR
+Fixed-point Subtract
+Register {\tt r3} is subtracted from register {\tt r3} and the difference is
+placed in {\tt r1}.  If {\tt r0} is used as the destination, then this
+instruction is effectively a {\tt CMP} (compare) instruction.  If {\tt r0}
+is used for {\tt r2}, then this instruction is effectively a {\tt NEG}
+(negate) instruction.
+
+reg[r1] = reg[r2] - reg[r3];
+SetStatusWord (reg[r1]);
+
+MUL
+RRR
+Integer Signed Multiplication
+Registers {\tt r2} and {\tt r3} are multiplied together and the product is
+placed in {\tt r1}.  The multiplication assumes that both operands are
+signed in two's-complement notation, and the result is also signed in
+two's-complement notation.  Overflow is ignored.
+
+reg[r1] = (signed long)reg[r2] * (signed long)reg[r3];
+SetStatusWord (reg[r1]);
+
+MULF
+RRR
+Fixed-point Signed Multiplication
+Registers {\tt r2} and {\tt r3} are multiplied together and the product is
+placed in {\tt r1}.  The multiplication assumes that both operands are
+signed in two's complement notation, and the result is also signed in
+two's complement notation.  Operands and product are in {\tt s15.16}
+fixed-point format.  (Actually, it really means that one operand is in
+{\tt s15.16} and the other operand is anything.  The result is in the
+same format as the other operand.)  Overflow is ignored.
+
+reg[r1] = ((signed long)reg[r2] * (signed long)reg[r3]) >> 16;
+SetStatusWord (reg[r1]);
+
+RECP
+RR
+Fixed-point Signed Reciprocal
+The reciprocal of register {\tt r2} is placed in {\tt r1}.  Both operands
+and result are in two's complement notation.  The input is assumed to
+be an integer (in {\tt s31.0} format) and the result is in {\tt s.31}
+fixed-point format.
+
+reg[r1] = 0x7FFFFFFF / (signed long)reg[r2];
+SetStatusWord (reg[r1]);
+
+>>Logic and Bitwise
+AND
+RRR
+Bit-wise And
+Registers {\tt r2} and {\tt r3} and bit-wise ANDed and the result is
+placed in {\tt r1}.
+
+reg[r1] = reg[r2] & reg[r3];
+SetStatusWord (reg[r1]);
+
+OR
+RRR
+Bit-wise Or
+Registers {\tt r2} and {\tt r3} and bit-wise ORed and the result is
+placed in {\tt r1}.
+
+reg[r1] = reg[r2] | reg[r3];
+SetStatusWord (reg[r1]);
+
+XOR
+RRR
+Bit-wise Xor
+Registers {\tt r2} and {\tt r3} and bit-wise XORed and the result is
+placed in {\tt r1}.
+
+reg[r1] = reg[r2] ^ reg[r3];
+SetStatusWord (reg[r1]);
+
+NOT
+RR
+Bit-wise Not
+The bit-wise inversion of register {\tt r2} is placed in {\tt r1}.
+
+reg[r1] = ~reg[r2];
+SetStatusWord (reg[r1]);
+
+LSL
+RRR
+Logical Shift Left
+Register {\tt r2} is shifted left {\tt r3} bits and the result is placed
+in {\tt r1}.
+
+reg[r1] = reg[r2] << reg[r3];
+SetStatusWord (reg[r1]);
+
+LSR
+RRR
+Logical Shift Right
+Register {\tt r2} is shifted right {\tt r3} bits and the result is placed
+in {\tt r1}.  The bits shifted in from the left are zeros.
+
+reg[r1] = reg[r2] >> reg[r3];
+SetStatusWord (reg[r1]);
+
+ASR
+RRR
+Arithmetic Shift Right
+Register {\tt r2} is shifted right {\tt r3} bits and the result is placed
+in {\tt r1}.  The bits shifted in from the left are the same as the sign
+bit.
+
+reg[r1] = (signed)reg[r2] >> reg[r3];
+SetStatusWord (reg[r1]);
+
+LSLI
+RRI
+Logical Shift Left Immediate
+Register {\tt r2} is shifted left {\tt imm} bits and the result is placed
+in {\tt r1}.
+
+reg[r1] = reg[r2] << imm;
+SetStatusWord (reg[r1]);
+
+LSRI
+RRI
+Logical Shift Right Immediate
+Register {\tt r2} is shifted right {\tt imm} bits and the result is placed
+in {\tt r1}.  The bits shifted in from the left are zeros.
+
+reg[r1] = reg[r2] >> imm;
+SetStatusWord (reg[r1]);
+
+ASRI
+RRI
+Arithmetic Shift Right Immediate
+Register {\tt r2} is shifted right {\tt r3} bits and the result is placed
+in {\tt r1}.  The bits shifted in from the left are the same as the sign
+bit.
+
+reg[r1] = (signed)reg[r2] >> imm;
+SetStatusWord (reg[r1]);
+
+>Control Flow
+JMP
+A
+Unconditional Jump
+Program execution will continue at address {\tt r2(imm)}.
+
+pc = reg[r2] + imm;
+
+CALL
+A
+Unconditional Subroutine Call
+The program counter is stored in register {\tt r31} and program execution
+will continue at the address specified.
+
+reg[31] = pc;
+pc = reg[r2] + imm;
+
+JEQ
+A
+Jump If Equal
+Program execution will continue at the address specified if the {\tt Z} bit
+of the status word is set.
+
+if (sw & Z) {
+    pc = reg[r2] + imm;
+}
+
+JEQL
+A
+Jump If Equal Likely
+Program execution will continue at the address specified if the {\tt Z} bit
+of the status word is set.  The ``Likely'' is a hint to the implementation
+that the jump is likely to take place and the instruction pipeline should
+be fed from the destination address.  The semantics are the same as those
+of {\tt JEQ}.
+
+if (sw & Z) {
+    pc = reg[r2] + imm;
+}
+
+JNE
+A
+Jump If Not Equal
+Program execution will continue at the address specified if the {\tt Z} bit
+of the status word is reset.
+
+if (!(sw & Z)) {
+    pc = reg[r2] + imm;
+}
+
+JNEL
+A
+Jump If Not Equal Likely
+Program execution will continue at the address specified if the {\tt Z} bit
+of the status word is reset.  The ``Likely'' is a hint to the implementation
+that the jump is likely to take place and the instruction pipeline should
+be fed from the destination address.  The semantics are the same as those
+of {\tt JNE}.
+
+if (!(sw & Z)) {
+    pc = reg[r2] + imm;
+}
+
+JLT
+A
+Jump If Less Than
+Program execution will continue at the address specified if the {\tt N} bit
+of the status word is set.
+
+if (sw & N) {
+    pc = reg[r2] + imm;
+}
+
+JLTL
+A
+Jump If Less Than Likely
+Program execution will continue at the address specified if the {\tt N} bit
+of the status word is set.  The ``Likely'' is a hint to the implementation
+that the jump is likely to take place and the instruction pipeline should
+be fed from the destination address.  The semantics are the same as those
+of {\tt JLT}.
+
+if (sw & N) {
+    pc = reg[r2] + imm;
+}
+
+JLE
+A
+Jump If Less Than or Equal To
+Program execution will continue at the address specified if the {\tt N} and
+{\tt Z} bits of the status word are set.
+
+if (sw & (N | Z)) {
+    pc = reg[r2] + imm;
+}
+
+JLEL
+A
+Jump If Less Than or Equal To Likely
+Program execution will continue at the address specified if the {\tt
+N} and {\tt Z} bits of the status word are set.  The ``Likely'' is a
+hint to the implementation that the jump is likely to take place and
+the instruction pipeline should be fed from the destination address. 
+The semantics are the same as those of {\tt JLE}.
+
+if (sw & (N | Z)) {
+    pc = reg[r2] + imm;
+}
+
+JGT
+A
+Jump If Greater Than
+Program execution will continue at the address specified if the {\tt N} and
+{\tt Z} bits of the status word are reset.
+
+if (!(sw & (N | Z))) {
+    pc = reg[r2] + imm;
+}
+
+JGTL
+A
+Jump If Greater Than Likely
+Program execution will continue at the address specified if the {\tt
+N} and {\tt Z} bits of the status word are reset.  The ``Likely'' is a
+hint to the implementation that the jump is likely to take place and
+the instruction pipeline should be fed from the destination address. 
+The semantics are the same as those of {\tt JGT}.
+
+if (!(sw & (N | Z))) {
+    pc = reg[r2] + imm;
+}
+
+JGE
+A
+Jump If Greater Than or Equal To
+Program execution will continue at the address specified if the {\tt N} bit
+of the status word is reset.
+
+if (!(sw & N)) {
+    pc = reg[r2] + imm;
+}
+
+JGEL
+A
+Jump If Greater Than or Equal To Likely
+Program execution will continue at the address specified if the {\tt N} bit
+of the status word is reset.  The ``Likely'' is a hint to the implementation
+that the jump is likely to take place and the instruction pipeline should
+be fed from the destination address.  The semantics are the same as those
+of {\tt JGE}.
+
+if (!(sw & N)) {
+    pc = reg[r2] + imm;
+}
+
+>Special Purpose Arithmetic
+DOT
+RRR
+Fixed-point Vector Dot-Product
+Registers {\tt r2} and {\tt r3} point to two four-element vectors in data
+memory.  Each element is in {\tt s15.16} format.  The vectors' dot product,
+also in {\tt s15.16} format, is stored in register {\tt r1}.
+
+reg[r1] = 0;
+for (i = 0; i < 4; i++) {
+    reg[r1] += (dMem[reg[r2] + i] * dMem[reg[r3] + i]) >> 16;
+}
+
+>Direct Memory Access to External RAM
+READ
+RR
+DMA Read from External Memory
+The 16 words starting at location in external (shared) memory pointed to
+by {\tt r2} are copied to the 16 words starting at location in data
+memory pointed to by {\tt r1}.
+
+for (i = 0; i < 16; i++) {
+    dMem[reg[r1] + i] = eMem[reg[r2] + i];
+}
+
+WRITE
+RR
+DMA Write to External Memory
+The 16 words starting at location in data memory pointed to by {\tt
+r2} are copied to the 16 words starting at location in external
+(shared) memory pointed to by {\tt r1}.
+
+for (i = 0; i < 16; i++) {
+    eMem[reg[r1] + i] = dMem[reg[r2] + i];
+}
+
+>Rasterization
+SCRSET
+RRI
+Set Screen Location
+Registers {\tt r1} and {\tt r2} contain the number of horizontal and
+vertical pixels on the screen, respectively.  The word in data memory
+pointed to by the immediate operand is used to determine the location
+of the frame buffer in external memory.  The high half-word specifies
+in kilobytes the starting address of the color frame buffer, and the
+low half-word specifies in kilobytes the starting address of the Z
+buffer.
+
+width = reg[r1];
+height = reg[r2];
+fbAddr = (dMem[imm] >> 16) << 10;
+zAddr = (dMem[imm] & 0xFFFF) << 10;
+
+CLS
+RR
+Clear Screen
+The frame buffer and Z buffer are cleared.  Every half-word of the
+color buffer is set to the low half-word of {\tt r1} and every
+half-word of the Z buffer is set to the low half-word of {\tt r2}. 
+This instruction is non-blocking and may return before the clear is
+finished, but the {\tt TREEPUT} instruction will block if {\tt CLS}
+has not yet terminated.
+
+NOOP
+
+TREESET
+RRR
+Setup Tree and Clear Enable Flags
+The tree is setup so that its left-most pixel will be at X coordinate
+{\tt r1} and Y coordinate {\tt r2}.  The enable registers of the tree
+are set to the complement of the lower 16 bits of {\tt r3}. 
+Specifically, the {\tt O} registers will be set to their corresponding
+bit in {\tt r3} and the {\tt I} registers will be set to the
+complement of that.  Using {\tt r0} enables all of the pixels.  The
+least significant bit corresponds to the right-most pixel in the tree.
+The X coordinate {\tt r1} must be a multiple of 16.
+
+NOOP
+
+TREEIN
+RR
+Edge Equation Test
+The value in register {\tt r1} is placed at the root of the tree with
+adder {\tt r2}.  After the data has trickled to the bottom of the
+tree, the left-most leaf will contain {\tt r1}, the next leaf will
+contain {\tt r1 + r2}, and so on until the right-mode leaf will
+contain {\tt r1 + 15*r2}.  At the leaf, the {\tt I} register will stay
+a 1 if the result is non-positive.  The {\tt O} register will stay a 0
+if the result is non-negative.  Register {\tt r1} will then be
+incremented by 16 times {\tt r2} to get it ready for the next call to
+{\tt TREEIN}.
+
+NOOP
+
+TREEVAL
+RRI
+Parameter Interpolation
+The value in register {\tt r1} is placed at the root of the tree with
+adder {\tt r2}.  After the data has trickled to the bottom of the tree,
+the left-most leaf will contain {\tt r1}, the next leaf will contain
+{\tt r1 + r2}, and so on until the right-mode leaf will contain
+{\tt r1 + 15*r2}.  The constant {\tt imm} specifies what will happen
+to the resulting data:
+\begin{itemize}
+\item[\bf 0]The high half-word of the result will be treated like a Z value and
+will be compared with the Z value for that leaf's pixel.  If the computed
+Z value is greater than the Z-Buffer's value, then the {\tt I} register
+is cleared and the {\tt O} register is set.  The Z value is also
+stored for later write to the Z-Buffer.
+\item[\bf 1]Bits 16 through 20 of the result are stored in bits 11 through 15
+of the color register at the leaf.  This will be displayed as the red
+color when the color buffer is displayed.
+\item[\bf 2]Bits 16 through 21 of the result are stored in bits 5 through 10
+of the color register at the leaf.  This will be displayed as the green
+color when the color buffer is displayed.  This component has one extra
+bit because the eye is more sensitive to green than it is to red and blue.
+\item[\bf 3]Bits 16 through 20 of the result are stored in bits 0 through 4
+of the color register at the leaf.  This will be displayed as the blue
+color when the color buffer is displayed.
+\end{itemize}
+Register {\tt r1} will then be incremented by 16 times
+{\tt r2} to get it ready for the next call to {\tt TREEVAL}.
+
+NOOP
+
+TREEPUT 
+OP
+Tree Write to Frame Buffer
+At each leaf, the value {\tt I | !O} is calculated and used as the
+enable register, and enabled leaves write their color and Z values to
+their pixels.
+
+NOOP

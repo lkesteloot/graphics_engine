@@ -1,0 +1,323 @@
+#!/usr/bin/perl
+
+#
+# This program takes an "inst" file and generates all of the files that
+# are affected by the instruction set of the machine.
+#
+
+if (@ARGV == 0) {
+    die "usage: $0 inst.dat\n";
+}
+
+$inst = shift;
+
+$formats{"OP"} = "";
+$formats{"R"} = "r1";
+$formats{"RR"} = "r1, r2";
+$formats{"RRR"} = "r1, r2, r3";
+$formats{"RRI"} = "r1, r2, imm";
+$formats{"RA"} = "r1, r2(imm)";
+$formats{"AR"} = "r2(imm), r1";
+$formats{"A"} = "r2(imm)";
+
+if (!open (INST, $inst)) {
+    die "$inst: $!\n";
+}
+
+$opnum = 0;
+while ($inst = &getline) {
+    if ($inst =~ /^>/) {   # Header, subheader
+	push (@inst, $inst);
+    } else {
+	$format = &getline;
+	$name = &getline;
+	$desc = "";
+	while (1) {
+	    $line = <INST>;
+	    last if (!$line || $line =~ /^$/);
+	    $desc .= $line;
+	}
+
+	$operation = "";
+	while (1) {
+	    $line = <INST>;
+	    last if (!$line || $line =~ /^$/);
+	    $operation .= $line;
+	}
+
+	push (@inst, join ('::', $inst, $format, $name, $desc, $operation));
+	$opnum++;
+    }
+}
+
+close (INST);
+
+print "$opnum instructions\n";
+$| = 1; # Don't buffer output
+print "Made";
+&dump_tex;
+&dump_dis;
+&dump_optbl;
+&dump_file ("asm.template.l", "asm.l");
+&dump_file ("asm.template.y", "asm.y");
+
+print "\n";
+
+exit 0;
+
+sub getline {
+    do {
+	$_ = <INST>;
+	last if (!$_);
+	chop;
+	s/#.*//;	# Remove comments
+	s/^\s+//;	# Remove leading whitespace
+	s/\s+$//;	# Remove trailing whitespace
+    } while (/^$/);	# Skip blank lines
+
+    return $_;
+}
+
+sub openout {
+    $outfilename = shift;
+
+    if (-f $outfilename) {
+	chmod 0664, $outfilename;
+    }
+    if (!open (OUT, ">" . $outfilename)) {
+	die "\n$outfilename: $!\n";
+    }
+}
+
+sub closeout {
+    close (OUT);
+    chmod 0444, $outfilename;
+    print " $outfilename";
+}
+
+sub dump_tex {
+    &openout ("doc/inst.tex");
+
+    # Instruction set summary
+
+    print OUT "\\begin{table}[ht]\\small\n";
+    print OUT "\\begin{tabular}{llll}\n";
+    print OUT "Instruction & Operands & Format & Description\\\\\\hline\n";
+
+    $opcode = 0;
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+            # Do nothing
+	} elsif (/^>(.*)/) {
+	    print OUT "\\medskip" if ($opcode != 0);
+	} else {
+	    print OUT "\\\\\n" if ($opcode != 0);
+
+	    ($inst, $format, $name, $desc, $operation) = split (/::/);
+
+	    print OUT "\\tt $inst&\\tt $formats{$format}&$format&$name";
+
+	    $opcode++;
+	}
+    }
+    print OUT "\\\\\n";
+
+    print OUT "\\end{tabular}\n";
+    print OUT "\\caption{Instruction Set Summary}\n";
+    print OUT "\\label{tab:instsummary}\n";
+    print OUT "\\end{table}\n\n";
+
+    # Instruction set details
+
+    $opcode = 0;
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+	    print OUT "\\subsection{$1}\n";
+	} elsif (/^>(.*)/) {
+	    print OUT "\\Section{$1}\n";
+	} else {
+	    ($inst, $format, $name, $desc, $operation) = split (/::/);
+	    $bin_opcode = &get_binary($opcode);
+
+	    print OUT "\\noindent\\textsf{\\textbf{\\Large $inst}}";
+	    print OUT "\\index{instruction set!$inst\@{\\tt $inst}}\\par\n";
+	    print OUT "\\noindent {\\sc $name}\\par";
+	    print OUT "\\begin{indented}{\\bf Format:}\n";
+	    print OUT "{\\tt $inst $formats{$format}}\\par\\vspace{3ex}\n";
+	    print OUT "\\format${format}{$bin_opcode}{$inst}\n";
+	    print OUT "\\end{indented}\\vspace{4ex}\n";
+	    print OUT "\\begin{indented}{\\bf Description:}\n";
+	    print OUT "$desc";
+	    print OUT "\\end{indented}\n";
+	    if ($operation ne "NOOP\n") {
+		print OUT "\\begin{indented}{\\bf Operation:}";
+		print OUT "\\vspace{.8ex}\n";
+		print OUT "\\begin{verbatimtab}\n";
+		print OUT "$operation";
+		print OUT "\\end{verbatimtab}\n";
+		print OUT "\\end{indented}\n";
+	    }
+	    print OUT "\\vspace{2em}\n\n";
+	    if ($opcode % 2) {
+		print OUT "\\newpage\n";
+	    }
+
+	    $opcode++;
+	}
+    }
+
+    &closeout;
+}
+
+sub get_binary {
+    local ($opcode) = @_;
+
+    $str = "";
+
+    while (length ($str) < 6) {
+	$str = ($opcode % 2) . $str;
+	$opcode /= 2;
+    }
+
+    return $str;
+}
+
+sub dump_dis {
+    &openout ("inst.h");
+
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+	    print OUT "    /*   $1 */\n";
+	} elsif (/^>(.*)/) {
+	    print OUT "    /* $1 */\n";
+	} else {
+	    ($inst, $format, $name, $desc) = split (/::/);
+
+	    print OUT "    { \"$inst\", \"$format\" },\n";
+	}
+    }
+
+    &closeout;
+}
+
+sub dump_optbl {
+    &openout ("optable.h");
+
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+	    print OUT "    /*   $1 */\n";
+	} elsif (/^>(.*)/) {
+	    print OUT "    /* $1 */\n";
+	} else {
+	    ($inst, $format, $name, $desc) = split (/::/);
+
+	    print OUT "    ${inst}func,\n";
+	}
+    }
+
+    &closeout;
+}
+
+sub dump_file {
+    local ($infile, $outfile) = @_;
+
+    if (!open (IN, $infile)) {
+	die "$infile: $!\n";
+    }
+
+    &openout ($outfile);
+
+    while (<IN>) {
+	if (/^>>>include (.*)$/) {
+	    print " ($1)";
+	    eval "$1()";
+	    die "$@" if "$@";
+	} else {
+	    print OUT;
+	}
+    }
+
+    close (IN);
+    &closeout;
+}
+
+sub LEXRULES {
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+	    print OUT "                /*   $1 */\n";
+	} elsif (/^>(.*)/) {
+	    print OUT "                /* $1 */\n";
+	} else {
+	    ($inst, $format, $name, $desc) = split (/::/);
+
+	    printf OUT ("%-16s{yylval.i = t%s; PushLine (yylineno); return t%s;}\n",
+		'"' . $inst . '"', $inst, $inst);
+	}
+    }
+}
+
+sub YACCTOKENS {
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+	    print OUT "/*   $1 */\n";
+	} elsif (/^>(.*)/) {
+	    print OUT "/* $1 */\n";
+	} else {
+	    ($inst, $format, $name, $desc) = split (/::/);
+
+	    print OUT "%token<i> t$inst\n";
+	}
+    }
+}
+
+sub YACCRULES {
+    $first = 1;
+
+
+    foreach (@inst) {
+	if (/^>>(.*)/) {
+	    print OUT "                /*   $1 */\n";
+	} elsif (/^>(.*)/) {
+	    print OUT "                /* $1 */\n";
+	} else {
+	    ($inst, $format, $name, $desc) = split (/::/);
+
+	    if (!$first) {
+		print OUT "                | ";
+	    } else {
+		print OUT "AsmInst		: ";
+		$first = 0;
+	    }
+
+	    print OUT "t$inst ";
+
+	    if ($format eq "OP") {
+		print OUT "\n\t\t    {\n";
+		print OUT "\t\t\top = OP(\$1);\n";
+	    } elsif ($format eq "R") {
+		print OUT "Register\n\t\t    {\n";
+		print OUT "\t\t\top = R(\$1, \$2);\n";
+	    } elsif ($format eq "RR") {
+		print OUT "Register ',' Register\n\t\t    {\n";
+		print OUT "\t\t\top = RR(\$1, \$2, \$4);\n";
+	    } elsif ($format eq "RRR") {
+		print OUT "Register ',' Register ',' Register\n\t\t    {\n";
+		print OUT "\t\t\top = RRR(\$1, \$2, \$4, \$6);\n";
+	    } elsif ($format eq "RRI") {
+		print OUT "Register ',' Register ',' Immediate\n\t\t    {\n";
+		print OUT "\t\t\top = RRI(\$1, \$2, \$4, \$6);\n";
+	    } elsif ($format eq "RA") {
+		print OUT "Register ',' Address\n\t\t    {\n";
+		print OUT "\t\t\top = RA(\$1, \$2, \$4.reg, \$4.imm);\n";
+	    } elsif ($format eq "AR") {
+		print OUT "Address ',' Register\n\t\t    {\n";
+		print OUT "\t\t\top = RA(\$1, \$4, \$2.reg, \$2.imm);\n";
+	    } elsif ($format eq "A") {
+		print OUT "Address\n\t\t    {\n";
+		print OUT "\t\t\top = A(\$1, \$2.reg, \$2.imm);\n";
+	    }
+
+	    print OUT "\t\t\tWriteInstruction(op);\n\t\t    }\n";
+	}
+    }
+}

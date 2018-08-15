@@ -1,0 +1,5 @@
+touch ge.ind
+makeindex ge
+latex ge.tex
+latex ge.tex
+dvipdfm -s 1-10 -p letter -o ge.pdf ge.dvi

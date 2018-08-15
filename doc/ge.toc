@@ -1,0 +1,57 @@
+\contentsline {chapter}{\numberline {1}System Overview}{1}
+\contentsline {section}{\numberline {1.1}Introduction}{1}
+\contentsline {section}{\numberline {1.2}Application Background}{3}
+\contentsline {section}{\numberline {1.3}System Requirements}{4}
+\contentsline {subsection}{\numberline {1.3.1}Transformation/Rasterization Rate}{4}
+\contentsline {subsection}{\numberline {1.3.2}Shared Memory Size}{6}
+\contentsline {chapter}{\numberline {2}Graphics Engine Architecture}{7}
+\contentsline {section}{\numberline {2.1}Registers}{7}
+\contentsline {section}{\numberline {2.2}Address Space}{7}
+\contentsline {section}{\numberline {2.3}Status Word}{9}
+\contentsline {section}{\numberline {2.4}Instruction Format}{9}
+\contentsline {section}{\numberline {2.5}Addressing Modes}{11}
+\contentsline {section}{\numberline {2.6}Rasterization Registers}{12}
+\contentsline {section}{\numberline {2.7}Instruction Sequencing}{12}
+\contentsline {section}{\numberline {2.8}External Synchronization}{12}
+\contentsline {section}{\numberline {2.9}Policing}{13}
+\contentsline {chapter}{\numberline {3}Instruction Set}{15}
+\contentsline {section}{\numberline {3.1}Register Loading and Storing}{15}
+\contentsline {section}{\numberline {3.2}General Purpose Arithmetic and Logic}{17}
+\contentsline {subsection}{\numberline {3.2.1}Arithmetic}{17}
+\contentsline {subsection}{\numberline {3.2.2}Logic and Bitwise}{23}
+\contentsline {section}{\numberline {3.3}Control Flow}{28}
+\contentsline {section}{\numberline {3.4}Special Purpose Arithmetic}{41}
+\contentsline {section}{\numberline {3.5}Direct Memory Access to External RAM}{41}
+\contentsline {section}{\numberline {3.6}Rasterization}{43}
+\contentsline {chapter}{\numberline {4}Rasterization}{51}
+\contentsline {section}{\numberline {4.1}Edge Equations}{51}
+\contentsline {section}{\numberline {4.2}Parameter Interpolation}{51}
+\contentsline {section}{\numberline {4.3}Rasterization Hardware}{52}
+\contentsline {section}{\numberline {4.4}Linear Expression Tree}{53}
+\contentsline {section}{\numberline {4.5}Enable Registers}{54}
+\contentsline {section}{\numberline {4.6}Tree Setup}{54}
+\contentsline {section}{\numberline {4.7}Pipeline}{54}
+\contentsline {chapter}{\numberline {5}Implementation}{57}
+\contentsline {section}{\numberline {5.1}Memory Interface}{57}
+\contentsline {chapter}{\numberline {6}Application Interface}{59}
+\contentsline {section}{\numberline {6.1}Display Lists}{59}
+\contentsline {section}{\numberline {6.2}Mode Word}{60}
+\contentsline {chapter}{\numberline {7}Rationale and Discussion}{63}
+\contentsline {section}{\numberline {7.1}High-level Architecture}{63}
+\contentsline {section}{\numberline {7.2}Storage}{63}
+\contentsline {section}{\numberline {7.3}Instruction Set}{64}
+\contentsline {section}{\numberline {7.4}Precision}{65}
+\contentsline {section}{\numberline {7.5}Rasterization Hardware}{65}
+\contentsline {section}{\numberline {7.6}Peculiarities}{65}
+\contentsline {subsection}{\numberline {7.6.1}Instruction Set}{65}
+\contentsline {subsection}{\numberline {7.6.2}Architecture}{67}
+\contentsline {subsection}{\numberline {7.6.3}Register Space}{67}
+\contentsline {subsection}{\numberline {7.6.4}Fixed Rasterization Tree}{67}
+\contentsline {subsection}{\numberline {7.6.5}No Texture Mapping}{67}
+\contentsline {chapter}{\numberline {8}Sample Code and Considerations}{69}
+\contentsline {section}{\numberline {8.1}Performance Enhancements}{69}
+\contentsline {subsection}{\numberline {8.1.1}Double-buffered Display Lists}{69}
+\contentsline {section}{\numberline {8.2}Programming Examples}{70}
+\contentsline {subsection}{\numberline {8.2.1}Matrix Times Vector}{70}
+\contentsline {subsection}{\numberline {8.2.2}Matrix Times Matrix}{70}
+\contentsline {subsection}{\numberline {8.2.3}Rasterization Loop}{71}

@@ -1,0 +1,29 @@
+Dr. Brooks,
+
+Rob Wheeler and I are in your 265 class and are working on the design
+project together.  We were originally planning on doing one of the
+projects listed on the assignment sheet, so we didn't turn anything in
+on Tuesday, but we since have had a new idea which we would prefer to
+do.
+
+We propose to design a Graphics Engine (GE) which would have an
+optimized instruction set for transforming and rasterizing 3-D graphics
+primitives for low-end machines.  The GE would typically be included in
+home or arcade video game machines.  A general-purpose CPU and the GE
+would share memory for communication.  The CPU would calculate the game
+dynamics and setup a graphics data structure (a display list) that the
+GE would traverse and rasterize in a pipeline arrangement.
+
+The GE instruction set should be optimized for four tasks: (a)
+traversing the display list (possibly a tree); (b) transforming the
+coordinates; (c) clipping; and (d) rasterizing polygons.  Only minimal
+3-D features will be supported -- one transformation matrix, gouraud
+shading, clipping, and Z-buffering.
+
+Unresolved issues: floating point vs. fixed point; vector vs. scalar
+matrix operations; plane equations vs. edge-walking; support of
+sprites (2-D primitives); and whether or not to support lighting.
+
+Let us know if this seems like an appropriate project goal.
+
+Lawrence

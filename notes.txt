@@ -1,0 +1,605 @@
+Graphics Engine
+---------------
+
+Lawrence Kesteloot
+Rob Wheeler
+
+March, 1995
+
+This document outlines the design of the Graphics Engine (GE) which has an
+optimized instruction set for transforming and rasterizing 3-D graphics
+primitives for low-end machines.  The GE typically is included in
+home or arcade video game machines.  A general-purpose CPU and the GE
+shares memory for communication.  The CPU calculates the game
+dynamics and sets up a graphics data structure (a display list) that the
+GE traverses and rasterizes in a pipeline arrangement.
+
+The GE instruction set is optimized for four tasks: (a) traversing the
+display list (possibly a tree); (b) transforming the coordinates; (c)
+clipping; and (d) rasterizing polygons.  Only minimal 3-D features are
+supported -- one transformation matrix, gouraud shading, clipping, and
+Z-buffering.  The graphics has no anti-aliasing, texturing,
+transparency, or level-of-detail support.  There is no audio or 2-D
+sprite support.
+
+The goal is to rasterize 100,000 gouraud-shaded lit triangles per
+second, or about 3,000 similar triangles per frame at 30 frames per
+second.
+
+Keep in mind that this is a very specialized CPU, not just because it
+is optimized for graphics, but because it is made for low-end,
+inexpensive graphics.  It does not provide the flexibility of high-end
+graphics workstations, and the programmer is expected to abide by
+restrictions, such as keeping coordinates within the range of
+fixed-point values.  When necessary, we simplified the hardware at the
+expense of a heavier burden on the programmer.  Most game programmers
+are used to programming in assembler and having no programming support
+whatsoever, so ours are not unusual or unexpected demands.
+
+Unresolved issues:
+  floating point vs. fixed point (probably fixed point)
+    I see no need to use floating point.  We'll need the real estate space
+    for the on-chip program and data memory.  We can represent coordinates
+    with 16 bits (s16.0) and the transformation matrices can have elements
+    in the format s15.16.
+  vector vs. scalar matrix operations (probably vector)
+    The only vector operation I can see being useful would be dot product.
+    This would be useful both for matrix multiplies and for lighting.  This
+    would require four parallel multipliers and two parallel adders.  This
+    would also allow us to have greater precision in the middle of the dot
+    product than we have in storage.  If we do have vector operations, we
+    need to decide between having a seperate set of vector registers, using
+    a set of scalar registers, or having the vectors in memory.  The last
+    choice is probably best, since the data is already there and the memory
+    will be on-chip and probably as fast as register memory.
+  plane equations vs. edge-walking (probably plane equations)
+    The algorithm for edge-walking is considerably more complex than the
+    one for plane equations, so the limited on-chip program memory will
+    probably be a good reason to implement plane equations.  For small
+    polygons, plane equations are as fast as edge-walkers, and interpolation
+    of parameters such as color is almost free.  Since we lack floating point,
+    though, plane equations may not work and we may have to implement
+    edge-walking.
+  support of sprites (2-D primitives) (probably no support)
+    Since we do not support texturing, it is likely that the programmer will
+    want support for blitting or sprites for text and other 2-D objects.  It
+    is simpler, however, to use a separate chip for sprites, and it is likely
+    that we will support no 2-D primitives.
+  whether to support lighting (probably lighting)
+    This is a difficult issue because support of lighting costs a great
+    deal, but the advantages of a display list are almost lost when no
+    post-transformation lighting is available, since rotated polygons
+    will need to have their color recomputed at every frame.  Support
+    for very basic lighting (diffuse only, one light source), would
+    require two seperate transformation matrices (although one stack
+    would be enough since the projection matrix does not need a stack),
+    space in the vertex structure for normal, two extra transformations
+    per vertex (one for normal and one for projection), and lighting
+    calculations (possible normalization and dot product).  (Note that
+    if lighting is not supported, we'll need to store color per vertex,
+    so there's probably no loss there.)
+
+The setup will probably look like this:
+
+      +-----------+               +------------+
+      |           |               |            |
+      |    CPU    |               |     GE     |
+      |           |               |            |
+      +-----------+               +------------+
+            |                           |
+            +-------------+-------------+
+                          |
+                   +-------------+     +------------------+
+                   |             |     |                  |
+                   |     RAM     |-----|  Video hardware  |
+                   |             |     |                  |
+                   +-------------+     +------------------+
+
+
+Display lists
+-------------
+
+The CPU and the GE will communication via display lists that will be
+stored in RAM.  The CPU will setup the display list for the next frame
+while the GE will be traversing and rasterizing the display list for
+the current frame.  Semaphores in memory will keep the
+producer-consumer setup synchronized.
+
+MEMORY REQUIREMENTS
+-------------------
+
+Video Memory
+------------
+
+Video memory will be double-buffered as is usually done.  Since the
+output of this machine is likely to be an NTSC television or a monitor
+of comparable quality (in video arcades), a frame resolution of at
+most 640x400 is required.  Such a lot resolution will increase the
+effective rasterization speed since triangles will be smaller.  A
+colormap system is not acceptible since we need to interpolate color
+for lighting, so an RGB scheme with 5 bits per component (and
+optionally an extra bit for green) will suffice.
+
+A Z-buffer will be used for hidden surface removal, with 16 bits per
+pixel.  The total video memory requirement is then 3x640x400x2 bytes,
+or 1,536,000 bytes.
+
+Display List Memory
+-------------------
+
+Each vertex needs to store three coordinates of 16 bits each (6
+bytes), either three color components or three normal components of 8
+bits each (3 bytes), with three bytes to spare if packed into three
+4-byte words.  The extra three bytes can store both extra data about
+the vertex and control information for the display list (the op-code).
+
+We expect to rasterize about 3,000 triangles per frame, with much of
+those in mesh format (one vertex per triangle).  This would take
+roughly 6000*12 bytes plus other information, such as transformation
+matrices (which are few).  The total display list memory requirement
+is then at most 100,000 bytes per display list, times two since
+display lists are double-buffered.
+
+The GE will access all memory in big-endian order, so it would be most
+efficient if the CPU's endianess were the same.
+
+Program Memory
+--------------
+
+The program running on the GE will be on-chip, and requirements for that will
+be detailed later.  Programs running on the CPU will probably be written
+in assembler and at most be 100,000 bytes, plus 200,000 bytes for data.
+
+Total
+-----
+
+The total memory requirements are then 1.5 + 0.2 + 0.3 = 2 megabytes.
+
+DISPLAY LISTS
+-------------
+
+The display lists will be stored in 4-byte words.  The high-order byte of
+the first word be the "op-code", to be interpreted by the program running
+on the GE.  Some op-codes will require further words as arguments.
+Here is a summary of display list formats and op-codes.
+
+
+00 00 VV NX  NY NZ XX XX  YY YY ZZ ZZ
+  Vertex.  NX, NY, and NZ are normals (in s0.7 format) or color (in 8.0 format)
+  depending on lighting mode.  XXXX, YYYY, and ZZZZ are coordinates.  VV
+  is the number of the vertex, starting at 0.   A normal triangle would
+  have three vertices, numbered 0, 1, and 2.  A vertex numbers greater than
+  2 will be taken modulo 3.  One triangle will be rasterized for every
+  vertex numbered 2 or above.  Triangle meshes therefore have a limit
+  of 254 triangles.
+
+01 AA AA AA
+  Subroutine call.  AAAAAA is the address of the next display list entry.
+  Three bytes can address 24 megabytes, which is more than enough.  There
+  will be a limited stack on the GE for return addresses.
+
+02 00 00 00
+  Return from subroutine call.  If the stack is empty, processing of the
+  display list terminates and the video buffer is swapped.  (???: should
+  this opcode be "00" so that running empty memory just returns?)
+
+03 00 00 00
+  Push model-view matrix.
+
+04 00 00 00
+  Pop model-view matrix.
+
+05 00 00 WW  MM MM MM MM  ...  MM MM MM MM  
+  Load matrix.  WW is 0 when the projection matrix should be loaded and
+  1 when the model-view matrix should be loaded.  The opcode word is
+  followed by 16 words for the matrix stored in row-major order.
+  MMMMMMMM is a 32-bit fixed-point number in the format s15.16.  The
+  current projection or model-view matrix is replaced by the new matrix.
+
+06 00 00 WW  MM MM MM MM  ...  MM MM MM MM
+  Multiply matrix.  Identical to Load Matrix except that the current
+  projection or model-view matrix is post-multiplied by the given
+  matrix.
+
+07 LX LY LZ  00 RR GG BB
+  Specify Lighting.  LX, LY, and LZ are elements (in s0.7 format) of a
+  vector pointing in the direction of the light.  RR, GG, and BB are
+  the color of the light.  (???: Is color necessary?  Won't white
+  be used most of the time?)
+  
+08 XX XX XX
+  Set mode.  The modeword is OR'ed with XXXXXX.
+
+09 XX XX XX
+  Reset mode.  The modeword is AND'ed with the inverse of XXXXXX.
+
+0A RR GG BB
+  Set color.  Sets the current surface color for lighting mode.
+
+
+MODE WORD
+---------
+
+The GE will keep an internal modeword of 32 bits, 24 of which will
+be accessible by the user.  The bits will have the following meaning.
+
+0 - Enable Lighting
+     If 0, lighting is disabled, color in the vertex structure is used for
+       the vertex's color, and only the model-view matrix is used.
+     If 1, lighting is enabled, normal in the vertex structure is
+       transformed, possibly normalized, and used to determine vertex color.
+       Vertex coordinates are passed through both model-view and projection
+       matrices.
+1 - Normalize Normals
+     If 0, normals are not normalized after being transformed by the
+       model-view matrix.  Normalization is not necessary if they are
+       already normalized in the structure and non-uniform scaling is
+       not used in the model-view matrix.
+     If 1, normals are normalized after being transformed by the model-view
+       matrix
+2 - Gouraud Shading
+     If 0, the color of the triangle will be that of the the last vertex.
+     If 1, the color of the vertices will be interpolated across the triangle.
+     (Note that this mode is independent of lighting.)
+3 - Enable Z-Buffer reading
+     If 0, the Z-Buffer will not be read to determine visibility of a pixel.
+       The pixel will always be written.
+     If 1, the Z-Buffer's value will be compared with the new pixel's depth
+       to determine visibility.  If the new pixel's Z value is less than
+       the Z-Buffer's value, the pixel will be written.
+4 - Enable Z-Buffer writing
+     If 0, the Z-Buffer will not be updated with the new Z value if a pixel
+       is written to it.
+     If 1, the Z-Buffer will be updated with written pixels' Z values.
+5 - Enable backface culling
+     If 0, then there will be no backface culling.
+     If 1, then backfaced polygons will be culled.
+
+GRAPHICS ENGINE
+---------------
+
+The graphics engine is a Harvard architecture chip with 1024 words of
+on-chip program memory, 1024 words of on-chip data memory, access to
+external RAM (with DMA access), 32 word-length registers, one program
+counter, one status word, and a RISC instruction set specialized for
+graphics processing.  It has no interrupts, no memory management unit,
+and no cache.
+
+Registers
+---------
+
+The GE has 32 general-purpose registers that are word-length (32 bits).
+Reading register 0 always returns 0 and writing to it has no effect.
+
+Address Space
+-------------
+
+Memory locations 0 through 1023 address words in the on-chip data memory.
+
+External RAM is read through special DMA instructions that copy blocks
+of memory into internal data memory.  Video memory is accessed through
+special instructions.
+
+There is no access to the program counter or the status word.
+
+Status Word
+-----------
+
+The status word is not bit addressable, but its contents can be tested
+with various instructions.
+
+Bit 0 - Zero (Z) - 0 if the last arithmetic or logical scalar or vector
+	  instruction returned a non-zero number, 1 otherwise.
+Bit 1 - Negative (N) - Set to the most significant bit of the result
+          of the last arithmetic or logical scalar or vector operation.
+
+Instruction Set
+---------------
+
+The instructions are broken down into several groups:
+  1. Register to and from data memory.
+  2. General purpose inter-register arithmetic and logic.
+  3. Looping and control.
+  4. Special purpose fixed-point arithmetic.
+  5. Vector arithmetic in-place in data memory.
+  6. DMA fetch from external RAM.
+  7. Clipping.
+  8. Rasterization
+  9. Video/Z-Buffer access.
+
+1. Register loading and storing
+
+	LD	r,addr
+
+	    The word in data memory at location "addr" is loaded into
+	    register "r".
+
+	ST	addr,r
+
+	    The word in register "r" is stored in data memory at
+	    location "addr".
+
+	(???: Do we need smaller chunks?  Maybe half-words would be
+	useful.)
+
+	LI	r1,num
+
+	    Load immediate.  The 16-bit value "num" is loaded into "r1".
+	    The upper 16 bits of "r1" are unchanged.
+
+2. General purpose inter-register arithmetic and logic.
+
+    Arithmetic
+
+	ADD	r1,r2,r3
+
+	    r1 = r2 + r3
+
+	SUB	r1,r2,r3
+
+	    r1 = r2 - r3
+
+	NEG	r1,r2
+
+	    r1 = -r2
+
+	MUL	r1,r2,r3
+
+	    r1 = r2 * r3 (signed)
+
+	MULU	r1,r2,r3
+
+	    r1 = r2 * r3 (unsigned)
+
+	DIV	r1,r2,r3
+
+	    r1 = r2 / r3 (signed)   (???: Do we need this?)
+	    (???: Where is remainder?)
+
+	DIVU	r1,r2,r3
+
+	    r1 = r2 / r3 (unsigned)   (???: Do we need this?)
+	    (???: Where is remainder?)
+
+	RECP	r1,r2
+
+	    r1 = 2^31 / r2 (unsigned)
+
+	TST	r1
+
+	    Test r1 and set the status word bits accordingly.
+
+	CMP	r1,r2
+
+	    Compare r1 and r2 and set the status word bits accordingly.
+	    The bits are set for r1 - r2.
+
+    Logic and Bitwise
+
+	AND	r1,r2,r3
+
+	    r1 = r2 & r3
+
+	OR	r1,r2,r3
+
+	    r1 = r2 | r3
+
+	XOR	r1,r2,r3
+
+	    r1 = r2 ^ r3
+
+	NOT	r1,r2
+
+	    r1 = ~r2
+
+	LSL	r1,r2,r3
+
+	    r1 = r2 << r3
+
+	LSR	r1,r2,r3
+
+	    r1 = r2 >> r3
+
+	ASR	r1,r2,r3
+
+	    r1 = (signed)r2 >> r3  (???: Do we need ASRI?  Probably not.)
+
+	LSLI	r1,r2,n
+
+	    r1 = r2 << n
+
+	LSRI	r1,r2,n
+
+	    r1 = r2 >> n
+
+
+3. Looping and control.
+
+    Looping
+
+	JMP	addr
+
+	    The program counter is set to "addr".
+
+	JEQ	addr
+
+	    Jump to "addr" if the Z bit is set in the status word.
+
+	JNE	addr
+
+	    Jump to "addr" is the Z bit is reset in the status word.
+
+	JLT	addr
+
+	    Jump to "addr" if the N bit is set in the status word.
+
+	JLE	addr
+
+	    Jump to "addr" if the N or Z bits are set in the status word.
+
+	JGT	addr
+
+	    Jump to "addr" if the N bit is reset or the Z bit is set in the
+	    status word.
+
+	JGE	addr
+
+	    Jump to "addr" if the N bit is reset in the status word.
+
+    Control
+
+	(???: What do we need here?)
+
+4. Special purpose fixed-point arithmetic.
+
+	(???: What do we need here?)
+	
+5. Vector arithmetic in-place in data memory.
+
+	DOT	r1,r2,r3
+
+	    Each element in the 4-word vector in data
+	    memory pointed to by "r2" is multiplied by the 4-word
+	    vector in data memory pointed to by "r3", and the
+	    resulting 4 words are added together and the sum is
+	    stored in register r1.
+
+	(???: Do we need one s15.16 and one s31.0 version?)
+	
+6. DMA fetch from external RAM.
+
+	DMA	r1,r2
+
+	The 16 words at location r2 in external memory are copied
+	into data memory at location r1.
+	
+7. Clipping.
+
+    For plane equations, we only need to clip to the hither and yon
+    planes.  For edge-walkers, we need to clip to the four other planes
+    as well.
+
+    Maybe here we could have an instruction that compares two numbers,
+    for example:
+
+	CLIP	r1,r2
+
+	    "r1" is compared with "r2" and "-r2".  The Z flag is set
+	    if "r1" > "r2", and the N flag is set if "r1" < "-r2".
+
+8. Rasterization.
+	
+    TREECLR
+    TREEIN
+    TREEVAL
+    TREEPUT
+
+	(See tree.txt)
+
+9. Video/Z-Buffer access.
+
+	Read Z
+	Write color
+	Write Z
+
+RASTERIZATION
+-------------
+
+We use the plane equation method of triangle rasterization, which means
+that we test every pixel in the bounding box of the triangle, and
+those that are inside have their parameters (color in this case)
+interpolated.  The linear function Ax + By + C is at the heart of
+this method, where x and y are pixel coordinates and A, B, and C
+are s15.16 constants.
+
+Edge Equations
+--------------
+
+Each edge of a triangle can be described by the equation Ax + By + C = 0.
+Given the three vertices (x0,y0), (x1,y1), and (x2,y2), we can calculate
+the three edge equations as follows:
+
+  A = y0 - y1
+  B = x1 - x0
+  C = y1*x0 - y0*x1
+
+for each pair of vertices.  (This is two multiplies and three adds per
+vertex.  The edge equations can be reused for triangle meshes.)  Each
+pixel inside the bounding box is plugged into the equations.  If all
+three signs are the same, then the pixel is inside the triangle.  The
+equations can be computed incrementally as the row is being traversed.
+
+Parameter Interpolation
+-----------------------
+
+Once a pixel is determined to be inside the triangle, its color needs
+to be interpolated.  Color is specified as a color triplet per vertex,
+and a linear interpolation is used between the vertices.  The function
+Ax + By + C is used -- it is essentially a plane through the three
+color points.  The constants A, B, and C can be found by solving the
+system of linear equations, since we have three unknowns and three
+equations (one for each vertex):
+
+  Ax1 + By1 + C = Red1
+  Ax2 + By2 + C = Red2
+  Ax3 + By3 + C = Red3
+
+(Similar equation for green and blue.)  Cramer's Rule is used to
+analytically solve the system:
+
+  det = x2 * y3 - x3 * y2
+  A = (Red1 * y2 - Red2 * y1 - Red1 * y3 + Red3 * y1 +
+	Red2 * y3 - Red3 * y2) / det
+  B = (x1 * Red2 - x2 * Red1 - x1 * Red3 + x3 * Red1 +
+	x2 * Red3 - x3 * Red2) / det
+  C = ((x2 * y3 - x3 * y2) * Red1 - (x1 * y3 - x3 * y1) * Red2 +
+	(x1 * y2 - x2 * y1) * Red3) / det
+
+Det takes 2 multiplies, one add, and one reciprocal.  A and B each take
+7 multiplies and 5 adds.  C takes 10 multiplies and 5 adds.  This needs
+to be done once per triangle and almost none of it can be reused in
+triangle meshes.
+
+--------------------------------------------------------------------
+
+Misc:
+  How to bootstrap GE (ROM?)
+  Maybe only double-buffer dynamic part of display list
+  Should we support normalization at all?
+
+
+
+Estimates of cycle count per vertex, assuming triangle mesh:
+
+  Load vertex (3)
+  Break out components (20)
+  Transform vertex by model-view (100)
+    First row (~25)
+    Second row (~25)
+    Third row (~25)
+    Fourth row (~25)  (???: Is this necessary?)
+  Transform normal by model-view (75)
+    First row (~25)
+    Second row (~25)
+    Third row (~25)
+  Back-face test (25)
+    Dot normal with viewer (25)
+  Lighting (40)
+    Normalize light (rarely, very expensive, maybe not supported)
+    Dot normal with light (25)
+    Multiply colors, normalize (10)
+  Transform vertex by projection (100)
+    First row (~25)
+    Second row (~25)
+    Third row (~25)
+    Fourth row (~25)
+    (???: Can this be combined with first transform?)
+  Clip (100 to 300, depending on plane eq vs. edge walking)
+  Rasterize (Depends on type)
+
+  Total: 600 + rasterizing (plane), 800 + rasterizing (edge).
+    We can cut 100 if we combine the two vertex transforms.
+
+Assuming 100 MHz clock
+  100,000 triangles per second must be rasterized in 1000 clock
+  cycles each.

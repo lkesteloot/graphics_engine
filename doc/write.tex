@@ -1,0 +1,237 @@
+\documentclass{article}
+\usepackage{moreverb}
+\title{Graphics Engine}
+\author{\it Lawrence Kesteloot\\\it Rob Wheeler}
+\begin{document}
+\maketitle
+
+\newenvironment{indented}[1]{\vspace{2ex}\noindent{\bf #1}\begin{list}{}{\setlength{\topsep}{0em}}\item}{\end{list}}
+
+\section{Introduction}
+This document characterizes the applications of the Graphics Engine (GE).
+The GE has an optimized instruction set for transforming and rasterizing 3-D
+graphics primitives for low-end machines.  The GE typically is
+included in home or arcade video game machines.  A general-purpose CPU
+and the GE share memory for communication.  The CPU calculates the
+game dynamics and sets up a graphics data structure (a display list)
+that the GE traverses and rasterizes in a pipeline arrangement.
+
+A typical application is a game that uses 3-D graphics along with
+sound and 2-D sprites (the latter two being supplied by other
+hardware).  The application uses the GE to transform, light, and shade
+the generated geometry.  A typical game might require up to
+3,000 triangles per scene to achieve rendering detail comparable to
+current 2-D games.  Thus, at 30 frames a second, roughly 100,000
+triangles per second must be transformed and half of these must be lit
+and rasterized.  (About half of the triangles will be backface-culled.)
+
+The GE instruction set is optimized for four tasks:
+\begin{enumerate}
+\item transforming coordinates;
+\item clipping;
+\item calculating plane equations; and
+\item rasterizing polygons.
+\end{enumerate}
+Only minimal 3-D features are supported---clipping,
+diffuse lighting, gouraud shading, and Z-buffering.  The GE has no
+anti-aliasing, texturing, transparency, or level-of-detail support.
+
+This is a very specialized CPU, not only because it is optimized
+for graphics, but because it is designed for low-end, inexpensive
+graphics.  It does not provide the flexibility of high-end graphics
+workstations, and the game programmer is expected to abide by
+restrictions, such as keeping coordinates within the range of
+fixed-point values.  When necessary, we simplified the hardware at the
+expense of a heavier burden on the programmer.  Most game programmers
+are used to programming in assembler and having no programming support
+whatsoever, so ours are not unusual nor unexpected demands.
+
+\begin{figure}
+\begin{verbatimtab}
+      +-----------+               +------------+
+      |           |               |            |
+      |    CPU    |               |     GE     |
+      |           |               |            |
+      +-----------+               +------------+
+            |                           |
+            +-------------+-------------+
+                          |
+                   +-------------+     +------------------+
+                   |             |     |                  |
+                   |     RAM     |-----|  Video hardware  |
+                   |             |     |                  |
+                   +-------------+     +------------------+
+\end{verbatimtab}
+\caption{Typical machine configuration.}
+\label{fig:configuration}
+\end{figure}
+
+A typical machine configuration is shown in
+Figure~\ref{fig:configuration}.
+The CPU and the GE will communicate using display lists that will be
+stored in shared memory.  The CPU will setup the display list for the next frame
+while the GE will traverse and rasterize the display list for
+the current frame.  Semaphores in memory will keep the
+producer-consumer pipeline synchronized.
+
+\section{Memory Requirements}
+
+\subsection{Video Memory}
+
+Video memory will be double-buffered.  Since the
+output device of this machine is likely to be an NTSC television or a monitor
+of comparable quality (in video arcades), a frame resolution of at
+most $640\times480$ is required.  Such a low resolution will increase the
+effective rasterization speed since triangles will be smaller.  A
+colormap system is not acceptable since we need to interpolate color
+for lighting, so an RGB scheme with 5 bits for red and blue and 6 bits for 
+green is used.
+
+A Z-buffer will be used for hidden surface removal, with 16 bits per
+pixel.  The total video memory requirement is then $3\mbox{
+buffers}\times640\mbox{ X-resolution}\times480\mbox{
+Y-resolution}\times2\mbox{ bytes/pixel} = 1,843,200$ bytes.
+
+\subsection{Display List Memory}
+
+Each vertex needs to store three coordinates (x, y, z) of 16 bits each (6
+bytes), either three color components or three normal components of 8
+bits each (3 bytes), with three bytes to spare if packed into three
+4-byte words.  The extra three bytes can store both extra data about
+the vertex and control information for the display list (the op-code).
+
+We expect to rasterize about 3,000 triangles per frame, with many of
+those in mesh format (one vertex per triangle).  This will take
+roughly $6000 \times 12$ bytes plus other information, such as transformation
+matrices (which are few).  The total display list memory requirement
+is then at most 100,000 bytes per display list, times two since
+display lists are double-buffered.
+
+The GE will access all memory in big-endian order, so it would be most
+efficient if the CPU's endianess were the same.
+
+\subsection{Program Memory}
+
+The program running on the GE will be on-chip. Programs running on the
+CPU will probably be at most be 100,000 bytes, plus 200,000 bytes for
+data.
+
+\subsection{Total}
+
+The total external memory requirements are then $1.8 + 0.2 + 0.3 = 2.3$
+megabytes.  This probably will be rounded up to 4 megabytes,
+requiring at least 22 bits in address fields.
+
+\section{Graphics Engine}
+
+The graphics engine is a Harvard architecture chip with 1024 32-bit words of
+on-chip program memory, 1024 words of on-chip data memory, access to
+external RAM (with DMA access), 32 word-length registers, one program
+counter, one status word, and a RISC instruction set specialized for
+graphics processing.  It has no interrupts, no memory management unit,
+and no cache.
+
+\subsection{Registers}
+
+The GE has 32 general-purpose registers that are word-length (32 bits).
+Reading register 0 always returns 0 and writing to it has no effect.
+
+\subsection{Address Space}
+
+Memory locations 0 through 1023 address words in the on-chip data memory.
+External RAM is read through special DMA instructions that copy blocks
+of memory into internal data memory.  Video memory is accessed through
+special rasterization instructions.
+There is no access to the program counter or the status word.
+
+\section{Rasterization}
+
+We use the plane equation method of triangle rasterization, which means
+that we test every pixel in the bounding box of the triangle, and
+those that are inside have their parameters (color in this case)
+interpolated.  The linear function $Ax + By + C$ is at the heart of
+this method, where $x$ and $y$ are pixel coordinates and $A$, $B$, and $C$
+are {\tt s15.16} fixed-point coefficients.
+
+\section{Special-Purpose Hardware for Rasterization}
+
+The inner loop of the plane equation rasterizer must perform the following
+operations:
+
+\begin{enumerate}
+\item Test three planes to see if they have the same sign
+\item If same sign, write color and Z to frame buffer
+\item Recalculate R, G, B, Z, and three plane equations
+\end{enumerate}
+
+If the operations are performed with general-purpose RISC instructions,
+only about 30,000 triangles will be possible with a 100MHz clock.
+Instead, we rasterize 16 horizontal adjoining pixels at a time
+using a PixelPlanes-like linear expression evaluation tree.
+
+\section{Instruction Set Requirements}
+
+Preliminary simulations of the hardware and software indicate that the
+most common instructions are those that manipulate the rasterization
+tree.  These instructions, then, should be optimized to do the most
+amount of work in the least about of time.  For example, they will
+automatically increment one of the operand registers by 16 times the
+other operand register, so as to get the registers ready for the next
+iteration of the loop.  This will save 7 instructions to increment
+these registers.
+
+Computing the plane equations for each triangle requires about 70
+additions, 90 multiplications, and one reciprocal per triangle. 
+Because of our choice of fixed-point data formats (s15.16), a
+fixed-point multiply will be useful in addition to the integer
+multiply.  Since the reciprocal is used infrequently,
+it is not necessary to optimize it as heavily
+as the other instructions.  A fast multiply would have a greater
+impact on the rasterization speed.
+
+A common operation, both in transformations and in lighting, is the
+dot product.  A sequential 4-element vector dot product requires four
+multiplications and 3 additions.  If we guess that additions take one
+clock cycle and multiplications take ten (based on the MIPS R4000 RISC chip
+specifications), a dot product will take 43 clock cycles, not counting
+the work required to load the matrix row into registers.  Instead,
+this common operation can be implemented as an instruction that
+multiplies two vectors directly in data memory.  On-chip data memory
+is likely to be as fast as registers, and the four multiplications can
+occur simultaneously.  The additions can happen in two steps, leaving
+the result in a register, for a total time of 12 clock cycles, without
+any additional need for memory loads.
+
+A graph of instruction frequencies estimates is attached.
+
+\end{document}
+
+\section{Instruction Frequencies}
+  Examine display list DMA
+  Decode display list instruction LD SHIFT LD JMP
+  Unpack vertex 3 LD 3 SHIFT 3 ST
+  Unpack normal 3 LD 3 SHIFT 3 ST
+  Transform vertex by projection/model-view 
+    First row DOT
+    Second row DOT
+    Third row DOT
+    Fourth row DOT
+  Transform normal by model-view (75)
+    First row DOT
+    Second row DOT
+    Third row DOT
+  Back-face test
+    Dot normal with viewer DOT CMP
+  Lighting 
+    Normalize normal by scaling 3 MUL
+    Dot normal with light DOT
+    Multiply colors, normalize 3 MUL
+  Clip 40 LD 40 ADD 40 CMP 40 BRANCH 30 MUL .1 RECP 
+  Rasterize 
+    Calculate plane equations 100 ADD 100 MUL 30 LD 30 ST
+    Loop over scanlines 10 ADD 10 CMP 10 BRANCH 60 LD 60 ADD
+    Rasterize scanline
+      20 ADD 20 CMP 20 JNE
+      60 TREEIN, TREEVAL
+      20 TREECLR, SET, PUT
+  

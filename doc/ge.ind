@@ -1,0 +1,88 @@
+\begin{theindex}
+
+  \item address space, 7
+  \item addressing modes, 11
+
+  \indexspace
+
+  \item edge equations, 39
+
+  \indexspace
+
+  \item instruction format, 9
+  \item instruction set, 13
+    \subitem {\tt ADD}, 15
+    \subitem {\tt AND}, 18
+    \subitem {\tt ASR}, 21
+    \subitem {\tt ASRI}, 22
+    \subitem {\tt CALL}, 23
+    \subitem {\tt CLS}, 34
+    \subitem {\tt DOT}, 30
+    \subitem {\tt JEQ}, 24
+    \subitem {\tt JEQL}, 24
+    \subitem {\tt JGE}, 29
+    \subitem {\tt JGEL}, 29
+    \subitem {\tt JGT}, 28
+    \subitem {\tt JGTL}, 28
+    \subitem {\tt JLE}, 27
+    \subitem {\tt JLEL}, 27
+    \subitem {\tt JLT}, 26
+    \subitem {\tt JLTL}, 26
+    \subitem {\tt JMP}, 23
+    \subitem {\tt JNE}, 25
+    \subitem {\tt JNEL}, 25
+    \subitem {\tt LD}, 13
+    \subitem {\tt LI}, 15
+    \subitem {\tt LSL}, 20
+    \subitem {\tt LSLI}, 21
+    \subitem {\tt LSR}, 20
+    \subitem {\tt LSRI}, 22
+    \subitem {\tt MUL}, 16
+    \subitem {\tt MULF}, 17
+    \subitem {\tt NOT}, 19
+    \subitem {\tt OR}, 18
+    \subitem {\tt READ}, 30
+    \subitem {\tt RECP}, 17
+    \subitem {\tt SCRSET}, 32
+    \subitem {\tt ST}, 13
+    \subitem {\tt SUB}, 16
+    \subitem {\tt TREEIN}, 35
+    \subitem {\tt TREEPUT}, 37
+    \subitem {\tt TREESET}, 34
+    \subitem {\tt TREEVAL}, 35
+    \subitem {\tt WRITE}, 32
+    \subitem {\tt XOR}, 19
+
+  \indexspace
+
+  \item lighting, 3
+    \subitem Phong, 3
+
+  \indexspace
+
+  \item mode word, 46
+
+  \indexspace
+
+  \item parameter interpolation, 39
+  \item plane equation method, 3, 39
+
+  \indexspace
+
+  \item rasterization, 39
+  \item registers, 7
+
+  \indexspace
+
+  \item status word, 9
+
+  \indexspace
+
+  \item transparency
+    \subitem screen-door, 3, 51
+
+  \indexspace
+
+  \item Z-buffer, 3
+
+\end{theindex}
