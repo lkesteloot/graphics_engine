@@ -37,7 +37,7 @@ From the introduction of the write-up:
 > * calculating plane equations; and
 > * rasterizing polygons.
 > 
-> Only minimal 3-D features are supported--clipping,
+> Only minimal 3-D features are supported—clipping,
 > diffuse lighting, Gouraud shading, screen-door transparency, and
 > Z-buffering.  The GE has no anti-aliasing, texturing, or blending
 > support.
